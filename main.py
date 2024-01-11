@@ -1,8 +1,10 @@
+import json
+
 import requests
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import re
 
 import pprint
@@ -14,6 +16,7 @@ LOGOUT_MESSAGE = "вышел с сервера"
 
 HITECH_LOGS_LINK = "https://logs1.sidemc.net/m1logs/Hitech_logger_public_logs/Logs/"
 DATE_FORMAT = "%d-%m-%Y"
+LOG_DATE_FORMAT = "%d.%m.%Y %H:%M:%S"
 
 
 def get_needed_dates():
@@ -56,27 +59,39 @@ def extract_login_logout_dates(log_lines: dict):
   """
   Function to extract date from strings of user login and logout messages and process them
   """
-  # Define a regular expression pattern to match the datetime format
+  user_data = {}
+  i = 0
   for log_line in list(log_lines.values())[0]:
     date_time_pattern = re.compile(r'\[(.*?)\]')
     date_time_match = date_time_pattern.search(log_line)
     date_time_str = date_time_match.group(1) if date_time_match else None
-    log_date_format = "%d.%m.%Y %H:%M:%S"
 
-    # Parse the date and time string into a datetime object
     if date_time_str:
-        log_datetime = datetime.strptime(date_time_str, log_date_format)
-        print(f"{GAMER_USERNAME} - {log_datetime}")
+        log_datetime = datetime.strptime(date_time_str, LOG_DATE_FORMAT)
+        if "зашёл на сервер" in log_line:
+          user_data.update({i: {"login": date_time_str}})
+        elif "вышел с сервера" in log_line:
+          user_data.update({i: {"logout": date_time_str}})
     else:
         print("Datetime not found in the log line.")
+    i += 1
+  return user_data
+
+def create_user_file(user_data: dict):
+  todays_date = date.today().strftime(DATE_FORMAT)
+
+  with open(f"{GAMER_USERNAME}-{todays_date}", "w") as file:
+    json.dump(user_data, file, indent=4)
+  pprint.pprint(user_data)
 
 
 def main():
   needed_dates = get_needed_dates()
+  user_data = {}
   for link in get_text_files_links(needed_dates):
-    extract_login_logout_dates(gamers_login_logout_messages(link))
+    user_data.update({f"{GAMER_USERNAME} - {link[0]}": extract_login_logout_dates(gamers_login_logout_messages(link))})
+  create_user_file(user_data=user_data)
 
 
 if __name__ == "__main__":
   main()
-
