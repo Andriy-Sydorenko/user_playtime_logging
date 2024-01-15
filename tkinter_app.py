@@ -3,7 +3,7 @@ import datetime
 from tkcalendar import DateEntry
 from PIL import Image
 import customtkinter as ctk
-
+from CTkMessagebox import CTkMessagebox
 import main
 import utils
 import webbrowser
@@ -13,27 +13,31 @@ DARK_MODE = "Dark mode"
 DEFAULT_DARK_MODE = "Dark mode"
 utils.set_default_appearance_mode(DEFAULT_DARK_MODE)
 
+
 def add_username():
     username = username_var.get()
     if username:
-        username_input_widget.configure(state=ctk.NORMAL)  # Enable editing
+        username_input_widget.configure(state=ctk.NORMAL)
         username_input_widget.insert(ctk.END, f"{username}\n")
-        username_input_widget.configure(state=ctk.DISABLED)  # Disable editing
-        username_var.set("")  # Clear the username entry
-        usernames_list.append(username)  # Add the username to the list
+        username_input_widget.configure(state=ctk.DISABLED)
+        username_var.set("")
+        usernames_list.append(username)
+
 
 def clear_text():
-    username_input_widget.configure(state=ctk.NORMAL)  # Enable editing
-    username_input_widget.delete(1.0, ctk.END)  # Clear all text
-    username_input_widget.configure(state=ctk.DISABLED)  # Disable editing
-    usernames_list.clear()  # Clear the usernames list
+    username_input_widget.configure(state=ctk.NORMAL)
+    username_input_widget.delete(1.0, ctk.END)
+    username_input_widget.configure(state=ctk.DISABLED)
+    usernames_list.clear()
+
 
 def delete_last_username():
     if usernames_list:
-        username_input_widget.configure(state=ctk.NORMAL)  # Enable editing
+        username_input_widget.configure(state=ctk.NORMAL)
         last_username = usernames_list.pop()
-        username_input_widget.delete(f"{len(usernames_list) + 1}.0", ctk.END)  # Delete the last line
-        username_input_widget.configure(state=ctk.DISABLED)  # Disable editing
+        username_input_widget.delete(f"{len(usernames_list) + 1}.0", ctk.END)
+        username_input_widget.configure(state=ctk.DISABLED)
+
 
 def dark_theme_switch():
     global DARK_MODE
@@ -45,10 +49,17 @@ def dark_theme_switch():
         ctk.set_appearance_mode("light")
         DARK_MODE = "Light mode"
 
+
 def open_url(event):
     webbrowser.open("https://github.com/Andriy-Sydorenko")
 
+
 def submit():
+    if start_date_var.get() > end_date_var.get():
+        CTkMessagebox(message="This date range is valid! First date should be less than second",
+                      icon="warning",
+                      option_1="Ok")
+        return
     main.main(usernames_list, start_date_var.get(), end_date_var.get())
 
 
@@ -94,7 +105,7 @@ clear_button.grid(pady=5, column=0, row=2, padx=(90, 0))
 delete_button = ctk.CTkButton(username_frame, text="Delete Last Username", command=delete_last_username)
 delete_button.grid(pady=5, row=3)
 
-get_button = ctk.CTkButton(username_frame, text="Get all data", command=lambda: print(submit()))
+get_button = ctk.CTkButton(username_frame, text="Get all data", command=submit)
 get_button.grid(pady=5)
 
 # Text widget to display usernames (initially disabled)

@@ -5,7 +5,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, date
 import re
-import pprint
+
 
 urllib3.disable_warnings(InsecureRequestWarning)
 LOGIN_MESSAGE = "зашёл на сервер"
@@ -16,11 +16,10 @@ DATE_FORMAT = "%d-%m-%Y"
 LOG_DATE_FORMAT = "%d.%m.%Y %H:%M:%S"
 
 def get_needed_dates(start_date: str, end_date: str):
-    date_object_from = datetime.strptime(start_date[0], DATE_FORMAT).date()
-    date_object_till = datetime.strptime(end_date[1], DATE_FORMAT).date()
+    date_object_from = datetime.strptime(start_date, DATE_FORMAT).date()
+    date_object_till = datetime.strptime(end_date, DATE_FORMAT).date()
     if date_object_till < date_object_from:
         print("Second date can't be less than the first!")
-        quit()
 
     date_difference = date_object_till - date_object_from
 
@@ -76,5 +75,7 @@ def get_text_files_links(dates: list) -> list:
 #         pprint.pprint(data)
 
 def main(*user_data):
-
-    print(*user_data)
+    usernames = user_data[0]
+    start_date = user_data[1]
+    end_date = user_data[2]
+    print(get_text_files_links(get_needed_dates(start_date, end_date)))
