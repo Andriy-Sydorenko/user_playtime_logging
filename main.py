@@ -1,81 +1,123 @@
-import json
 import requests
 import urllib3
 from urllib3.exceptions import InsecureRequestWarning
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta, date
-import re
-
+from datetime import datetime, timedelta
+from utils import extract_datetime_from_log_string
+from CTkMessagebox import CTkMessagebox
 
 urllib3.disable_warnings(InsecureRequestWarning)
-LOGIN_MESSAGE = "зашёл на сервер"
-LOGOUT_MESSAGE = "вышел с сервера"
 
-HITECH_LOGS_LINK = "https://logs1.sidemc.net/m1logs/Hitech_logger_public_logs/Logs/"
+LOGIN_MESSAGES = ["зашёл", "зашёл на сервер", ]
+LOGOUT_MESSAGES = ["вышел", "вышел с сервера", ]
+SERVERS = {
+    "HiTech": "https://logs1.sidemc.net/m1logs/Hitech_logger_public_logs/Logs/",
+    "MagicNew": "https://logs1.sidemc.net/m1logs/Magicnew_public_logs/",
+    "TechnoMagic": "https://logs1.sidemc.net/m1logs/Technomagic_logger_public_logs/Logs/",
+    "TechnoMagicRPG": "https://logs1.sidemc.net/m1logs/TMRPG_public_logs/",
+    "MagicNew Test Server": "https://logs1.sidemc.net/m1logs/Magicnew_ServerTest_public_logs/",
+}
+
 DATE_FORMAT = "%d-%m-%Y"
 LOG_DATE_FORMAT = "%d.%m.%Y %H:%M:%S"
+
 
 def get_needed_dates(start_date: str, end_date: str):
     date_object_from = datetime.strptime(start_date, DATE_FORMAT).date()
     date_object_till = datetime.strptime(end_date, DATE_FORMAT).date()
-    if date_object_till < date_object_from:
-        print("Second date can't be less than the first!")
 
     date_difference = date_object_till - date_object_from
 
     all_dates = [(date_object_from + timedelta(days=i)).strftime(DATE_FORMAT) for i in range(date_difference.days + 1)]
     return all_dates
 
-def get_text_files_links(dates: list) -> list:
-    response = requests.get(url=HITECH_LOGS_LINK, verify=False)
-    html_content = response.text
-    soup = BeautifulSoup(html_content, "html.parser")
 
-    href_texts = [a.text for a in soup.find_all("a", href=True) if a.text != "../"]
-    return [(file_name, HITECH_LOGS_LINK + file_name) for file_name in href_texts if file_name.split(".")[0] in dates]
+def get_text_files_links(dates: list, server_url: str) -> list[tuple]:
+    try:
+        response = requests.get(url=server_url, verify=False)
+        html_content = response.text
+        soup = BeautifulSoup(html_content, "html.parser")
 
-# def gamers_login_logout_messages(link):
-#     response = requests.get(link[1], verify=False)
-#     login_logout_messages = []
-#     if response.status_code == 200:
-#         login_logout_messages = [line for line in response.text.split('\n') if any(username in line for username in USERNAME_LIST)
-#                                   and (LOGIN_MESSAGE in line or LOGOUT_MESSAGE in line)]
-#
-#     return {link[0]: login_logout_messages}
-#
-# def extract_login_logout_dates(log_lines: dict):
-#     user_data = {}
-#     i = 0
-#     for log_line in list(log_lines.values())[0]:
-#         date_time_pattern = re.compile(r'\[(.*?)\]')
-#         date_time_match = date_time_pattern.search(log_line)
-#         date_time_str = date_time_match.group(1) if date_time_match else None
-#
-#         if date_time_str:
-#             log_datetime = datetime.strptime(date_time_str, LOG_DATE_FORMAT)
-#             username = [username for username in USERNAME_LIST if username in log_line][0]
-#             if username not in user_data:
-#                 user_data[username] = {"login": [], "logout": []}
-#
-#             if "зашёл на сервер" in log_line:
-#                 user_data[username]["login"].append(date_time_str)
-#             elif "вышел с сервера" in log_line:
-#                 user_data[username]["logout"].append(date_time_str)
-#         else:
-#             print("Datetime not found in the log line.")
-#         i += 1
-#     return user_data
-#
-# def create_user_file(user_data: dict):
-#     todays_date = date.today().strftime(DATE_FORMAT)
-#
-#     for username, data in user_data.items():
-#         with open(f"{username}-{todays_date}.json", "w") as file:
-#             json.dump(data, file, indent=4)
-#         pprint.pprint(data)
+        href_texts = [a.text for a in soup.find_all("a", href=True) if a.text != "../"]
+        return [(file_name, server_url + file_name) for file_name in href_texts if file_name.split(".")[0] in dates]
+    except requests.exceptions.ConnectionError:
+        CTkMessagebox(title="Problems with connection!",
+                      message="Check your internet connection!",
+                      icon="warning",
+                      option_1="Ok")
+
+
+def gamers_login_logout_messages(links: list[tuple], usernames: list[str]):
+    users_data = {}
+    for link in links:
+        response = requests.get(link[1], verify=False)
+        if response.status_code == 200:
+            for username in usernames:
+                if username not in users_data:
+                    users_data[username] = []
+
+                user_messages = [
+                    line for line in response.text.split("\n") if
+                    any(f"{username.strip()} {login_message}" in line for login_message in LOGIN_MESSAGES) or
+                    any(f"{username.strip()} {logout_message}" in line for logout_message in LOGOUT_MESSAGES)
+                ]
+                users_data[username].extend(user_messages)
+        else:
+            CTkMessagebox(title="Connection problem!",
+                          message="Maybe logs URL was changed!",
+                          icon="cancel",
+                          option_1="Ok")
+
+    return users_data
+
+
+def count_playtime(days_count: int, users_data: dict):
+    users_playtime = {}
+    for user in users_data.keys():
+        total_playtime = timedelta()
+        user_data: list = users_data[user]
+        if not user_data:
+            continue
+        if "вышел с сервера" in user_data[0] or "вышел" in user_data[0]:
+            datetime_obj = extract_datetime_from_log_string(user_data.pop(0), LOG_DATE_FORMAT)
+            midnight_day = datetime(datetime_obj.year, datetime_obj.month, datetime_obj.day)
+            total_playtime += datetime_obj - midnight_day
+        if "зашёл" in user_data[-1] or "зашёл на сервер" in user_data[-1]:
+            datetime_obj = extract_datetime_from_log_string(user_data.pop(-1), LOG_DATE_FORMAT)
+            midnight_day = datetime(datetime_obj.year,
+                                    datetime_obj.month,
+                                    datetime_obj.day,
+                                    hour=23, minute=59, second=59)
+            total_playtime += midnight_day - datetime_obj
+
+        for login, logout in zip(user_data[0::2], user_data[1::2]):
+            login_time = extract_datetime_from_log_string(login, LOG_DATE_FORMAT)
+            logout_time = extract_datetime_from_log_string(logout, LOG_DATE_FORMAT)
+            
+            time_difference = logout_time - login_time
+            total_playtime += time_difference
+
+        users_playtime.update({
+            user: {
+                "Total playtime": str(total_playtime),
+                "Average playtime": str(total_playtime / days_count)
+            }
+        })
+    return users_playtime
+
 
 def main(*user_data):
-    usernames = user_data[0]
+    usernames = list(set(user_data[0]))
     start_date = user_data[1]
     end_date = user_data[2]
-    print(get_text_files_links(get_needed_dates(start_date, end_date)))
+    server = user_data[3]
+    server_url = SERVERS.get(server)
+    links = get_text_files_links(get_needed_dates(start_date, end_date), server_url)
+    try:
+        days_count = len(links)
+    except TypeError:
+        return
+
+    users_data = gamers_login_logout_messages(links, usernames)
+    final_result = count_playtime(days_count, users_data)
+    return final_result

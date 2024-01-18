@@ -6,3 +6,4 @@ ttkthemes==3.2.2
 customtkinter==5.2.2
 Pillow==10.2.0
 CTkMessagebox==2.5
+tktabl==0.2.0
