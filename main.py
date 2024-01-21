@@ -101,7 +101,6 @@ def count_playtime(days_count: int, users_data: dict):
         formatted_delta = "{:02}:{:02}:{:02}".format(
             average_playtime.seconds // 3600, (average_playtime.seconds // 60) % 60, average_playtime.seconds % 60
         )
-        total_playtime = timedelta(days=6, hours=2, minutes=37, seconds=49)
 
         days = total_playtime.days
         hours, remainder = divmod(total_playtime.seconds, 3600)
