@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+from typing import IO
 
 import customtkinter as ctk
 
@@ -29,3 +30,10 @@ def timedelta_to_str(td: timedelta):
     formatted_time = "{:02}:{:02}:{:02}".format(total_hours, minutes, seconds)
 
     return formatted_time
+
+
+def parse_usernames_from_file(file_path):
+    with open(file_path, "r") as file:
+        read_file = file.read()
+        lines = [line.strip() for line in read_file.split("\n")]
+    return lines

@@ -93,14 +93,26 @@ def count_playtime(days_count: int, users_data: dict):
         for login, logout in zip(user_data[0::2], user_data[1::2]):
             login_time = extract_datetime_from_log_string(login, LOG_DATE_FORMAT)
             logout_time = extract_datetime_from_log_string(logout, LOG_DATE_FORMAT)
-            
+
             time_difference = logout_time - login_time
             total_playtime += time_difference
 
+        average_playtime = total_playtime / days_count
+        formatted_delta = "{:02}:{:02}:{:02}".format(
+            average_playtime.seconds // 3600, (average_playtime.seconds // 60) % 60, average_playtime.seconds % 60
+        )
+        total_playtime = timedelta(days=6, hours=2, minutes=37, seconds=49)
+
+        days = total_playtime.days
+        hours, remainder = divmod(total_playtime.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        total_hours = days * 24 + hours
+
         users_playtime.update({
             user: {
-                "Total playtime": str(total_playtime),
-                "Average playtime": str(total_playtime / days_count)
+                "Total playtime": f"{total_hours}:{minutes}:{seconds}",
+                "Average playtime": formatted_delta,
             }
         })
     return users_playtime

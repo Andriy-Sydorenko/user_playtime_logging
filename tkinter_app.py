@@ -1,4 +1,5 @@
 import tkinter as tk
+import babel.numbers
 import datetime
 from tkcalendar import DateEntry
 from PIL import Image
@@ -8,6 +9,7 @@ import main
 import utils
 import webbrowser
 from tkinter import ttk
+from tkinter import filedialog as fd
 
 
 usernames_list = []
@@ -16,8 +18,8 @@ DEFAULT_DARK_MODE = "Dark mode"
 utils.set_default_appearance_mode(DEFAULT_DARK_MODE)
 
 
-def add_username():
-    username = username_var.get()
+def add_username(username: str = None):
+    username = username_var.get() or username
     text_content = username_input_widget.get("1.0", tk.END)
     if username and username not in text_content:
         username_input_widget.configure(state=ctk.NORMAL)
@@ -103,11 +105,29 @@ def copy_selected_item():
             app.update()
 
 
+def open_text_file():
+    filetypes = (
+        ('text files', '*.txt'),
+    )
+
+    file_path = fd.askopenfilename(
+        title="Open a file",
+        initialdir="/",
+        filetypes=filetypes
+    )
+
+    if file_path:
+        print("nigger")
+        usernames = utils.parse_usernames_from_file(file_path)
+        for username in usernames:
+            add_username(username=username)
+
+
 app = ctk.CTk()
 app.resizable(False, False)
 app.geometry("700x550")
 app.title("Get user playtime statistic")
-app.iconbitmap("misc/tkinter_app_icon.ico")
+app.iconbitmap("tkinter_app_icon.ico")
 
 main_frame = ctk.CTkFrame(app)
 main_frame.pack(side=ctk.LEFT, anchor=ctk.N, padx=20, pady=20)
@@ -123,8 +143,8 @@ dark_mode_switch = ctk.CTkSwitch(master=dark_mode_frame,
                                  onvalue="Dark mode",
                                  offvalue="Light mode")
 dark_mode_switch.grid(row=0, column=0, pady=5)
-theme_image = ctk.CTkImage(light_image=Image.open("misc/light_mode.webp"),
-                           dark_image=Image.open("misc/dark_mode.webp"),
+theme_image = ctk.CTkImage(light_image=Image.open("light_mode.webp"),
+                           dark_image=Image.open("dark_mode.webp"),
                            size=(25, 25))
 dark_mode_label = ctk.CTkLabel(master=dark_mode_frame, text="", image=theme_image)
 dark_mode_label.grid(row=0, column=1, padx=(5, 0))
@@ -148,8 +168,11 @@ add_button.grid(pady=5, column=0, row=2, padx=(0, 90))
 clear_button = ctk.CTkButton(username_frame, text="Clear", command=clear_text, width=50, height=40)
 clear_button.grid(pady=5, column=0, row=2, padx=(90, 0))
 
+open_file_button = ctk.CTkButton(username_frame, text="Open a file", command=open_text_file)
+open_file_button.grid(row=3)
+
 delete_button = ctk.CTkButton(username_frame, text="Delete Last Username", command=delete_last_username)
-delete_button.grid(pady=5, row=3)
+delete_button.grid(pady=5, row=4)
 
 calculate_button = ctk.CTkButton(username_frame, text="Calculate data", command=submit, fg_color="black")
 calculate_button.grid(pady=5)
@@ -166,8 +189,8 @@ footer_frame.grid(column=0, pady=10)
 made_by_label = ctk.CTkLabel(footer_frame, text="© Made by deficiente")
 made_by_label.pack(side=tk.LEFT, padx=10)
 
-github_image = ctk.CTkImage(light_image=Image.open("misc/github_light_mode.webp"),
-                            dark_image=Image.open("misc/github_light_mode.webp"),
+github_image = ctk.CTkImage(light_image=Image.open("github_light_mode.webp"),
+                            dark_image=Image.open("github_light_mode.webp"),
                             size=(35, 35))
 github_label = ctk.CTkLabel(master=footer_frame, text="", image=github_image, cursor="hand2")
 github_label.bind("<Button-1>", open_url)
