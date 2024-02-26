@@ -1,15 +1,18 @@
+from datetime import datetime, timedelta
+
 import requests
 import urllib3
-from urllib3.exceptions import InsecureRequestWarning
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from utils import extract_datetime_from_log_string
 from CTkMessagebox import CTkMessagebox
+from urllib3.exceptions import InsecureRequestWarning
+
+from utils import extract_datetime_from_log_string
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
 LOGIN_MESSAGES = ["зашёл", "зашёл на сервер", ]
 LOGOUT_MESSAGES = ["вышел", "вышел с сервера", ]
+
 SERVERS = {
     "HiTech": "https://logs1.sidemc.net/m1logs/Hitech_logger_public_logs/Logs/",
     "MagicNew": "https://logs1.sidemc.net/m1logs/Magicnew_public_logs/",
@@ -58,9 +61,12 @@ def gamers_login_logout_messages(links: list[tuple], usernames: list[str]):
 
                 user_messages = [
                     line for line in response.text.split("\n") if
-                    any(f"{username.strip()} {login_message}" in line for login_message in LOGIN_MESSAGES) or
-                    any(f"{username.strip()} {logout_message}" in line for logout_message in LOGOUT_MESSAGES)
+                    any(f"{username.strip()} {login_message}" in line
+                        for login_message in LOGIN_MESSAGES)
+                    or any(f"{username.strip()} {logout_message}" in line
+                           for logout_message in LOGOUT_MESSAGES)
                 ]
+
                 users_data[username].extend(user_messages)
         else:
             CTkMessagebox(title="Connection problem!",
@@ -69,6 +75,37 @@ def gamers_login_logout_messages(links: list[tuple], usernames: list[str]):
                           option_1="Ok")
 
     return users_data
+
+
+def gamers_events_wins(links: list[tuple]) -> dict:
+    user_wins = {}
+    for link in links:
+        response = requests.get(link[1], verify=False)
+        if response.status_code == 200:
+            lines = response.text.split("\n")
+            for line in lines:
+                if "/ereward" in line:
+                    try:
+                        player_username = line.split("/ereward")[1].strip()
+                        if player_username in user_wins:
+                            user_wins[player_username] += 1
+                        else:
+                            user_wins[player_username] = 1
+
+                    except IndexError:
+                        continue
+
+        else:
+            CTkMessagebox(title="Connection problem!",
+                          message="Maybe logs URL was changed!",
+                          icon="cancel",
+                          option_1="Ok")
+    return user_wins
+
+
+def format_event_winners_data(event_winners_data: dict) -> str:
+    formatted_counts = [f"{username}={wins_count}" for username, wins_count in event_winners_data.items()]
+    return ", ".join(formatted_counts)
 
 
 def count_playtime(days_count: int, users_data: dict):
@@ -117,12 +154,11 @@ def count_playtime(days_count: int, users_data: dict):
     return users_playtime
 
 
-def main(*user_data):
-    usernames = list(set(user_data[0]))
-    start_date = user_data[1]
-    end_date = user_data[2]
-    server = user_data[3]
-    server_url = SERVERS.get(server)
+def get_users_playtime(usernames_list, start_date, end_date, server_name):
+    usernames = list(set(usernames_list))
+    start_date = start_date
+    end_date = end_date
+    server_url = SERVERS.get(server_name)
     links = get_text_files_links(get_needed_dates(start_date, end_date), server_url)
     try:
         days_count = len(links)
@@ -132,3 +168,12 @@ def main(*user_data):
     users_data = gamers_login_logout_messages(links, usernames)
     final_result = count_playtime(days_count, users_data)
     return final_result
+
+
+def get_user_event_wins(start_date, end_date, server_name) -> str:
+    server_url = SERVERS.get(server_name)
+    links = get_text_files_links(get_needed_dates(start_date, end_date), server_url)
+    event_winners_data = gamers_events_wins(links=links)
+    formatted_event_winners_data = format_event_winners_data(event_winners_data)
+
+    return formatted_event_winners_data

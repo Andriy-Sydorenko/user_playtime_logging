@@ -1,16 +1,17 @@
-import tkinter as tk
-import babel.numbers
 import datetime
-from tkcalendar import DateEntry
-from PIL import Image
+import tkinter as tk
+import webbrowser
+from tkinter import filedialog as fd
+from tkinter import ttk
+
+import babel.numbers
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
+from PIL import Image
+from tkcalendar import DateEntry
+
 import main
 import utils
-import webbrowser
-from tkinter import ttk
-from tkinter import filedialog as fd
-
 
 usernames_list = []
 DARK_MODE = "Dark mode"
@@ -68,7 +69,9 @@ def open_url(event):  # noqa
 
 
 def submit():
-    if start_date_var.get() > end_date_var.get():
+    start_date = datetime.datetime.strptime(start_date_var.get(), main.DATE_FORMAT)
+    end_date = datetime.datetime.strptime(end_date_var.get(), main.DATE_FORMAT)
+    if start_date > end_date:
         CTkMessagebox(title="Date input error!",
                       message="This date range is invalid! First date should be less than second",
                       icon="warning",
@@ -81,7 +84,10 @@ def submit():
                       option_1="Ok")
         return
 
-    result = main.main(usernames_list, start_date_var.get(), end_date_var.get(), server_choice.get())
+    result = main.get_users_playtime(usernames_list=usernames_list,
+                                     start_date=start_date_var.get(),
+                                     end_date=end_date_var.get(),
+                                     server_name=server_choice.get())
 
     table.delete(*table.get_children())
     try:
@@ -93,13 +99,33 @@ def submit():
         return
 
 
+def calculate_event_winners():
+    start_date = datetime.datetime.strptime(start_date_var.get(), main.DATE_FORMAT)
+    end_date = datetime.datetime.strptime(end_date_var.get(), main.DATE_FORMAT)
+    if start_date > end_date:
+        CTkMessagebox(title="Date input error!",
+                      message="This date range is invalid! First date should be less than second",
+                      icon="warning",
+                      option_1="Ok")
+        return
+    result = main.get_user_event_wins(start_date=start_date_var.get(),
+                                      end_date=end_date_var.get(),
+                                      server_name=server_choice.get())
+    app.clipboard_clear()
+    app.clipboard_append(result)
+
+    CTkMessagebox(title="Data with event winners is copied to the clipboard",
+                  message="Now you can paste the data whenever you want",
+                  option_1="Ok")
+
+
 def copy_selected_item():
     selected_item = table.selection()
     if selected_item:
-        item_values = table.item(selected_item)['values']
+        item_values = table.item(selected_item)["values"]
         if item_values:
             # Concatenate the values to create a string
-            text_to_copy = ' '.join(map(str, item_values))
+            text_to_copy = " ".join(map(str, item_values))
             app.clipboard_clear()
             app.clipboard_append(text_to_copy)
             app.update()
@@ -107,7 +133,7 @@ def copy_selected_item():
 
 def open_text_file():
     filetypes = (
-        ('text files', '*.txt'),
+        ("text files", "*.txt"),
     )
 
     file_path = fd.askopenfilename(
@@ -125,7 +151,7 @@ def open_text_file():
 
 app = ctk.CTk()
 app.resizable(False, False)
-app.geometry("700x550")
+app.geometry("700x600")
 app.title("Get user playtime statistic")
 app.iconbitmap("tkinter_app_icon.ico")
 
@@ -172,16 +198,22 @@ open_file_button = ctk.CTkButton(username_frame, text="Open a file", command=ope
 open_file_button.grid(row=3)
 
 delete_button = ctk.CTkButton(username_frame, text="Delete Last Username", command=delete_last_username)
-delete_button.grid(pady=5, row=4)
+delete_button.grid(pady=4, row=4)
 
 calculate_button = ctk.CTkButton(username_frame, text="Calculate data", command=submit, fg_color="black")
-calculate_button.grid(pady=5)
+calculate_button.grid()
 calculate_button.bind("<Enter>", on_enter)
 calculate_button.bind("<Leave>", on_leave)
 
+event_winners_button = ctk.CTkButton(username_frame,
+                                     text="Get event winners",
+                                     command=calculate_event_winners,
+                                     fg_color="#46008b")
+event_winners_button.grid(pady=5)
+
 username_input_widget = ctk.CTkTextbox(username_frame)
 username_input_widget.configure(state=ctk.DISABLED)
-username_input_widget.grid()
+username_input_widget.grid(pady=5)
 
 footer_frame = ctk.CTkFrame(username_frame)
 footer_frame.grid(column=0, pady=10)
@@ -233,10 +265,10 @@ table.heading("average", text="Average playtime")
 table.tag_configure("dark_mode", foreground="white", background="#2d2d2d")
 for item_id in table.get_children():
     table.item(item_id, tags=("dark_mode",))
-table.place(relx=0.655, rely=0.545, anchor=ctk.CENTER)
-table.column("username", width=160)  # Adjust the width value as needed
-table.column("total", width=140)      # Adjust the width value as needed
-table.column("average", width=140)
+table.place(relx=0.655, rely=0.5, anchor=ctk.CENTER)
+table.column("username", width=150)
+table.column("total", width=150)
+table.column("average", width=150)
 table.bind("<Control-c>", lambda event: copy_selected_item())
 
 app.mainloop()
