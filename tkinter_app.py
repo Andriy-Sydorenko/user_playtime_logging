@@ -13,36 +13,10 @@ from tkcalendar import DateEntry
 import main
 import utils
 
-usernames_list = []
+usernames = []
 DARK_MODE = "Dark mode"
 DEFAULT_DARK_MODE = "Dark mode"
 utils.set_default_appearance_mode(DEFAULT_DARK_MODE)
-
-
-def add_username(username: str = None):
-    username = username_var.get() or username
-    text_content = username_input_widget.get("1.0", tk.END)
-    if username and username not in text_content:
-        username_input_widget.configure(state=ctk.NORMAL)
-        username_input_widget.insert(ctk.END, f"{username}\n")
-        username_input_widget.configure(state=ctk.DISABLED)
-        username_var.set("")
-        usernames_list.append(username)
-
-
-def clear_text():
-    username_input_widget.configure(state=ctk.NORMAL)
-    username_input_widget.delete(1.0, ctk.END)
-    username_input_widget.configure(state=ctk.DISABLED)
-    usernames_list.clear()
-
-
-def delete_last_username():
-    if usernames_list:
-        username_input_widget.configure(state=ctk.NORMAL)
-        usernames_list.pop()
-        username_input_widget.delete(f"{len(usernames_list) + 1}.0", ctk.END)
-        username_input_widget.configure(state=ctk.DISABLED)
 
 
 def dark_theme_switch():
@@ -71,6 +45,7 @@ def open_url(event):  # noqa
 def submit():
     start_date = datetime.datetime.strptime(start_date_var.get(), main.DATE_FORMAT)
     end_date = datetime.datetime.strptime(end_date_var.get(), main.DATE_FORMAT)
+    usernames_list = [username for username in username_input_widget.get("1.0", "end").split("\n") if username]
     if start_date > end_date:
         CTkMessagebox(title="Date input error!",
                       message="This date range is invalid! First date should be less than second",
@@ -124,7 +99,6 @@ def copy_selected_item():
     if selected_item:
         item_values = table.item(selected_item)["values"]
         if item_values:
-            # Concatenate the values to create a string
             text_to_copy = " ".join(map(str, item_values))
             app.clipboard_clear()
             app.clipboard_append(text_to_copy)
@@ -143,15 +117,15 @@ def open_text_file():
     )
 
     if file_path:
-        print("nigger")
         usernames = utils.parse_usernames_from_file(file_path)
+        username_input_widget.delete("1.0", "end")
         for username in usernames:
-            add_username(username=username)
+            username_input_widget.insert("end", username + "\n")
 
 
 app = ctk.CTk()
 app.resizable(False, False)
-app.geometry("700x600")
+app.geometry("700x480")
 app.title("Get user playtime statistic")
 app.iconbitmap("tkinter_app_icon.ico")
 
@@ -180,25 +154,15 @@ username_frame = ctk.CTkFrame(main_frame, width=200, height=200)
 username_frame.pack(side=ctk.LEFT)
 
 # Create input field for username
-username_label = ctk.CTkLabel(username_frame, text="Username:")
-username_label.grid(row=0)
+username_label = ctk.CTkLabel(username_frame, text="Usernames:")
+username_label.grid(row=0, pady=1)
 
-username_var = ctk.StringVar()
-username_entry = ctk.CTkEntry(username_frame, textvariable=username_var)
-username_entry.grid(row=1)
-
-# Buttons for username operations
-add_button = ctk.CTkButton(username_frame, text="Add", command=add_username, width=50, height=40)
-add_button.grid(pady=5, column=0, row=2, padx=(0, 90))
-
-clear_button = ctk.CTkButton(username_frame, text="Clear", command=clear_text, width=50, height=40)
-clear_button.grid(pady=5, column=0, row=2, padx=(90, 0))
+username_input_widget = ctk.CTkTextbox(username_frame)
+username_input_widget.configure()
+username_input_widget.grid(row=1)
 
 open_file_button = ctk.CTkButton(username_frame, text="Open a file", command=open_text_file)
-open_file_button.grid(row=3)
-
-delete_button = ctk.CTkButton(username_frame, text="Delete Last Username", command=delete_last_username)
-delete_button.grid(pady=4, row=4)
+open_file_button.grid(row=2, pady=5)
 
 calculate_button = ctk.CTkButton(username_frame, text="Calculate data", command=submit, fg_color="black")
 calculate_button.grid()
@@ -210,10 +174,6 @@ event_winners_button = ctk.CTkButton(username_frame,
                                      command=calculate_event_winners,
                                      fg_color="#46008b")
 event_winners_button.grid(pady=5)
-
-username_input_widget = ctk.CTkTextbox(username_frame)
-username_input_widget.configure(state=ctk.DISABLED)
-username_input_widget.grid(pady=5)
 
 footer_frame = ctk.CTkFrame(username_frame)
 footer_frame.grid(column=0, pady=10)
@@ -258,14 +218,14 @@ end_date_entry.configure()
 server_choice = ctk.CTkOptionMenu(app, values=list(main.SERVERS.keys()))
 server_choice.pack(padx=10, pady=25, side=ctk.LEFT, anchor=ctk.N)
 
-table = ttk.Treeview(app, columns=("username", "total", "average"), show="headings", height=21)
+table = ttk.Treeview(app, columns=("username", "total", "average"), show="headings", height=16)
 table.heading("username", text="Username")
 table.heading("total", text="Total playtime")
 table.heading("average", text="Average playtime")
 table.tag_configure("dark_mode", foreground="white", background="#2d2d2d")
 for item_id in table.get_children():
     table.item(item_id, tags=("dark_mode",))
-table.place(relx=0.655, rely=0.5, anchor=ctk.CENTER)
+table.place(relx=0.655, rely=0.515, anchor=ctk.CENTER)
 table.column("username", width=150)
 table.column("total", width=150)
 table.column("average", width=150)
