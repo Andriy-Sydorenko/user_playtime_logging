@@ -103,7 +103,7 @@ def calculate_event_winners():
                   option_1="Ok")
 
 
-def copy_selected_item():
+def copy_selected_item(event):
     selected_items = table.selection()  # This will get all selected items, not just one
     all_text_to_copy = []
 
@@ -120,7 +120,7 @@ def copy_selected_item():
         app.update()
 
 
-def select_all_table_items(event):
+def select_all_table_rows(event):
     for item in table.get_children():
         table.selection_add(item)
 
@@ -187,7 +187,7 @@ try:
 except IOError:
     CTkMessagebox(
         title="Unable to load the file",
-        message="Something went wrong when loaded username file, or maybe it's the first launch",
+        message="Something went wrong when loaded username file",
         icon="warning",
         option_1="Damn!"
     )
@@ -260,7 +260,7 @@ table.place(relx=0.655, rely=0.515, anchor=ctk.CENTER)
 table.column("username", width=150)
 table.column("total", width=150)
 table.column("average", width=150)
-table.bind("<Control-c>", lambda event: copy_selected_item)
-table.bind("<Double-1>", select_all_table_items)
+table.bind("<Control-c>", copy_selected_item)
+table.bind("<Double-1>", select_all_table_rows)
 
 app.mainloop()
