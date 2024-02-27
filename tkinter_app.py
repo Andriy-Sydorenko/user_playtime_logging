@@ -4,7 +4,7 @@ import webbrowser
 from tkinter import filedialog as fd
 from tkinter import ttk
 
-import babel.numbers
+import babel.numbers  # noqa
 import customtkinter as ctk
 from CTkMessagebox import CTkMessagebox
 from PIL import Image
@@ -13,7 +13,6 @@ from tkcalendar import DateEntry
 import main
 import utils
 
-usernames = []
 DARK_MODE = "Dark mode"
 DEFAULT_DARK_MODE = "Dark mode"
 utils.set_default_appearance_mode(DEFAULT_DARK_MODE)
@@ -43,6 +42,16 @@ def open_url(event):  # noqa
 
 
 def submit():
+    try:
+        with open("users.txt", "w") as file:
+            file.write(username_input_widget.get("1.0", "end").strip("\n"))
+    except IOError:
+        CTkMessagebox(
+            title="Unable to save the file",
+            message="Something went wrong when saved username file",
+            icon="warning",
+            option_1="Damn!"
+        )
     start_date = datetime.datetime.strptime(start_date_var.get(), main.DATE_FORMAT)
     end_date = datetime.datetime.strptime(end_date_var.get(), main.DATE_FORMAT)
     usernames_list = [username for username in username_input_widget.get("1.0", "end").split("\n") if username]
@@ -95,14 +104,25 @@ def calculate_event_winners():
 
 
 def copy_selected_item():
-    selected_item = table.selection()
-    if selected_item:
-        item_values = table.item(selected_item)["values"]
+    selected_items = table.selection()  # This will get all selected items, not just one
+    all_text_to_copy = []
+
+    for item in selected_items:
+        item_values = table.item(item)["values"]  # Extract values for each selected item
         if item_values:
-            text_to_copy = " ".join(map(str, item_values))
-            app.clipboard_clear()
-            app.clipboard_append(text_to_copy)
-            app.update()
+            text_to_copy = " ".join(map(str, item_values))  # Create a string from the item values
+            all_text_to_copy.append(text_to_copy)  # Add this string to the list of texts to copy
+
+    final_text_to_copy = "\n".join(all_text_to_copy)  # Join all item texts with a newline
+    if final_text_to_copy:  # Check if there's anything to copy
+        app.clipboard_clear()
+        app.clipboard_append(final_text_to_copy)
+        app.update()
+
+
+def select_all_table_items(event):
+    for item in table.get_children():
+        table.selection_add(item)
 
 
 def open_text_file():
@@ -132,7 +152,6 @@ app.iconbitmap("tkinter_app_icon.ico")
 main_frame = ctk.CTkFrame(app)
 main_frame.pack(side=ctk.LEFT, anchor=ctk.N, padx=20, pady=20)
 
-# Dark mode switch frame
 dark_mode_frame = ctk.CTkFrame(main_frame, width=20)
 dark_mode_frame.pack(pady=10)
 switch_var = ctk.StringVar(value="Dark mode")
@@ -160,6 +179,18 @@ username_label.grid(row=0, pady=1)
 username_input_widget = ctk.CTkTextbox(username_frame)
 username_input_widget.configure()
 username_input_widget.grid(row=1)
+
+try:
+    with open("users.txt", "r") as file:
+        usernames = file.read()
+        username_input_widget.insert("1.0", usernames)
+except IOError:
+    CTkMessagebox(
+        title="Unable to load the file",
+        message="Something went wrong when loaded username file, or maybe it's the first launch",
+        icon="warning",
+        option_1="Damn!"
+    )
 
 open_file_button = ctk.CTkButton(username_frame, text="Open a file", command=open_text_file)
 open_file_button.grid(row=2, pady=5)
@@ -218,7 +249,7 @@ end_date_entry.configure()
 server_choice = ctk.CTkOptionMenu(app, values=list(main.SERVERS.keys()))
 server_choice.pack(padx=10, pady=25, side=ctk.LEFT, anchor=ctk.N)
 
-table = ttk.Treeview(app, columns=("username", "total", "average"), show="headings", height=16)
+table = ttk.Treeview(app, columns=("username", "total", "average"), show="headings", height=16, selectmode="extended")
 table.heading("username", text="Username")
 table.heading("total", text="Total playtime")
 table.heading("average", text="Average playtime")
@@ -229,6 +260,7 @@ table.place(relx=0.655, rely=0.515, anchor=ctk.CENTER)
 table.column("username", width=150)
 table.column("total", width=150)
 table.column("average", width=150)
-table.bind("<Control-c>", lambda event: copy_selected_item())
+table.bind("<Control-c>", lambda event: copy_selected_item)
+table.bind("<Double-1>", select_all_table_items)
 
 app.mainloop()
